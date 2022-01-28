@@ -83,6 +83,7 @@ fn solve_recursive(instance: &mut Instance, state: &mut State, report: &mut Repo
 pub fn solve(mut instance: Instance, file_name: String, settings: Settings) -> Report {
     let num_nodes = instance.num_nodes_total();
     let root_packing = PackingBound::new(&instance, &settings);
+    let ahs = reductions::calc_greedy_approximation(&instance);
     let root_bounds = RootBounds {
         max_degree: lower_bound::calc_max_degree_bound(&instance).unwrap_or(num_nodes),
         sum_degree: lower_bound::calc_sum_degree_bound(&instance),
@@ -92,7 +93,7 @@ pub fn solve(mut instance: Instance, file_name: String, settings: Settings) -> R
             .unwrap_or(num_nodes),
         packing: root_packing.bound(),
         sum_over_packing: root_packing.calc_sum_over_packing_bound(&instance),
-        greedy_upper: reductions::calc_greedy_approximation(&instance).len(),
+        greedy_upper: ahs.len(), //reductions::calc_greedy_approximation(&instance).len(),
     };
     let packing_from_scratch_limit = settings.packing_from_scratch_limit;
     let mut report = Report {
@@ -137,6 +138,22 @@ pub fn solve(mut instance: Instance, file_name: String, settings: Settings) -> R
     for &edge in instance.edges() {
         let hit = instance.edge(edge).any(|node| hs_set.contains(&node));
         assert!(hit, "edge {} not hit", edge);
+    }
+
+    info!("Packing Bound {}", report.root_bounds.packing);
+    for edge in root_packing.packing {
+        info!("Set Index {}", edge);
+        for node in instance.edge(edge) {        
+            info!("Set Element {}", node);
+        }
+    }
+    info!("AHS Bound {}", report.root_bounds.greedy_upper);
+    for node in ahs {
+        info!("Node {}", node);
+    }
+    info!("HS Bound {}", report.opt);
+    for node in state.minimum_hs {
+        info!("Node {}", node);
     }
 
     report
