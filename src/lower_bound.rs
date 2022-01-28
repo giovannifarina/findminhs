@@ -98,7 +98,7 @@ pub fn calc_efficiency_bound(instance: &Instance) -> (EfficiencyBound, Vec<Effic
 
 #[derive(Debug, Default)]
 pub struct PackingBound {
-    packing: Vec<EdgeIdx>,
+    pub packing: Vec<EdgeIdx>,
 }
 
 impl PackingBound {
