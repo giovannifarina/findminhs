@@ -80,6 +80,75 @@ fn solve_recursive(instance: &mut Instance, state: &mut State, report: &mut Repo
     reduction.restore(instance, &mut state.partial_hs);
 }
 
+pub fn solveAhs(mut instance: Instance, file_name: String, settings: Settings) {
+    let ahs = reductions::calc_greedy_approximation(&instance);
+    for node in ahs {
+        print!("{} ", node);
+    }
+    println!();
+}
+
+pub fn solveAsp(mut instance: Instance, file_name: String, settings: Settings) {
+    let root_packing = PackingBound::new(&instance, &settings);
+    for edge in root_packing.packing {
+        print!("{} ", edge);
+    }
+    println!();
+    /*
+    for edge in root_packing.packing {
+        for node in instance.edge(edge) {        
+            print!("{} ", node);
+        }
+        println!();
+    }*/
+}
+
+pub fn solveHs(mut instance: Instance, file_name: String, settings: Settings) {
+    let num_nodes = instance.num_nodes_total();
+    let root_packing = PackingBound::new(&instance, &settings);
+    let ahs = reductions::calc_greedy_approximation(&instance);
+    let root_bounds = RootBounds {
+        max_degree: lower_bound::calc_max_degree_bound(&instance).unwrap_or(num_nodes),
+        sum_degree: lower_bound::calc_sum_degree_bound(&instance),
+        efficiency: lower_bound::calc_efficiency_bound(&instance)
+            .0
+            .round()
+            .unwrap_or(num_nodes),
+        packing: root_packing.bound(),
+        sum_over_packing: root_packing.calc_sum_over_packing_bound(&instance),
+        greedy_upper: ahs.len(), //reductions::calc_greedy_approximation(&instance).len(),
+    };
+    let packing_from_scratch_limit = settings.packing_from_scratch_limit;
+    let mut report = Report {
+        file_name,
+        opt: instance.num_nodes_total(),
+        branching_steps: 0,
+        settings,
+        root_bounds,
+        runtimes: RuntimeStats::default(),
+        reductions: ReductionStats::default(),
+        upper_bound_improvements: Vec::new(),
+    };
+    report
+        .reductions
+        .costly_discard_packing_from_scratch_steps_per_run =
+        vec![0; packing_from_scratch_limit + 1];
+
+    let mut state = State {
+        partial_hs: Vec::new(),
+        minimum_hs: instance.nodes().to_vec(),
+        last_log_time: Instant::now(),
+        solve_start_time: Instant::now(),
+    };
+    solve_recursive(&mut instance, &mut state, &mut report);
+
+    for node in state.minimum_hs {
+        print!("{} ", node);
+    }
+    println!();
+}
+
+
 pub fn solve(mut instance: Instance, file_name: String, settings: Settings) -> Report {
     let num_nodes = instance.num_nodes_total();
     let root_packing = PackingBound::new(&instance, &settings);

@@ -27,6 +27,12 @@ enum CliOpts {
 
     /// Convert a given instance into an equivalent ILP
     Ilp(IlpOpts),
+
+    Ahs(SolveOpts),
+
+    Asp(SolveOpts),
+
+    Hs(SolveOpts),
 }
 
 #[derive(Debug, StructOpt)]
@@ -109,14 +115,77 @@ fn convert_to_ilp(opts: IlpOpts) -> Result<()> {
     instance.export_as_ilp(stdout.lock())
 }
 
+fn ahs(opts: SolveOpts) -> Result<()> {
+    let file_name = opts
+        .hypergraph
+        .file_name()
+        .and_then(OsStr::to_str)
+        .ok_or_else(|| anyhow!("File name can't be extracted"))?
+        .to_string();
+    let instance = {
+        let reader = BufReader::new(File::open(&opts.hypergraph)?);
+        Instance::load(reader)?
+    };
+    let settings = {
+        let reader = BufReader::new(File::open(&opts.settings)?);
+        serde_json::from_reader(reader)?
+    };
+    solve::solveAhs(instance, file_name, settings);
+    
+    Ok(())
+}
+
+fn asp(opts: SolveOpts) -> Result<()> {
+    let file_name = opts
+        .hypergraph
+        .file_name()
+        .and_then(OsStr::to_str)
+        .ok_or_else(|| anyhow!("File name can't be extracted"))?
+        .to_string();
+    let instance = {
+        let reader = BufReader::new(File::open(&opts.hypergraph)?);
+        Instance::load(reader)?
+    };
+    let settings = {
+        let reader = BufReader::new(File::open(&opts.settings)?);
+        serde_json::from_reader(reader)?
+    };
+    solve::solveAsp(instance, file_name, settings);
+    
+    Ok(())
+}
+
+fn minhs(opts: SolveOpts) -> Result<()> {
+    let file_name = opts
+        .hypergraph
+        .file_name()
+        .and_then(OsStr::to_str)
+        .ok_or_else(|| anyhow!("File name can't be extracted"))?
+        .to_string();
+    let instance = {
+        let reader = BufReader::new(File::open(&opts.hypergraph)?);
+        Instance::load(reader)?
+    };
+    let settings = {
+        let reader = BufReader::new(File::open(&opts.settings)?);
+        serde_json::from_reader(reader)?
+    };
+    solve::solveHs(instance, file_name, settings);
+    
+    Ok(())
+}
+
 fn main() -> Result<()> {
-    env_logger::Builder::from_env(env_logger::Env::new().filter_or("FINDMINHS_LOG", "info"))
-        .format_timestamp_millis()
-        .init();
+    //env_logger::Builder::from_env(env_logger::Env::new().filter_or("FINDMINHS_LOG", "info"))
+    //    .format_timestamp_millis()
+    //    .init();
 
     let opts = CliOpts::from_args();
     match opts {
         CliOpts::Solve(solve_opts) => solve(solve_opts),
         CliOpts::Ilp(ilp_opts) => convert_to_ilp(ilp_opts),
+        CliOpts::Ahs(solve_opts) => ahs(solve_opts),
+        CliOpts::Asp(solve_opts) => asp(solve_opts),
+        CliOpts::Hs(solve_opts) => minhs(solve_opts),
     }
 }
